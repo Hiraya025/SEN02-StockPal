@@ -47,7 +47,7 @@
                     <h2 class="text-2xl font-bold text-gray-800">Inventory Overview</h2>
                     <p class="text-gray-600 mt-1">Real-time stock tracking and alerts.</p>
                 </div>
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
+                <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
                     <i class="fas fa-plus mr-2"></i> Add Item
                 </button>
             </div>
@@ -76,6 +76,33 @@
             </div>
         </div>
     </main>
+
+    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-96">
+            <h3 class="text-xl font-bold mb-4">Add New Item</h3>
+            <form id="addForm" onsubmit="submitNewItem(event)">
+                <input type="text" id="skuInput" placeholder="SKU (e.g., ITEM-001)" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
+                <input type="text" id="nameInput" placeholder="Item Name" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
+                <input type="text" id="catInput" placeholder="Category" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                
+                <div class="flex gap-3 mb-5">
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-500 mb-1 block">Current Stock</label>
+                        <input type="number" id="stockInput" value="0" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-500 mb-1 block">Min Threshold</label>
+                        <input type="number" id="minInput" value="10" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         // Fetch data from your Flask Backend
@@ -109,7 +136,12 @@
                                 <span class="font-bold ${item.is_low_stock ? 'text-red-600' : 'text-gray-800'}">${item.current_stock}</span> 
                                 <span class="text-xs text-gray-400">/ Min: ${item.min_threshold}</span>
                             </td>
-                            <td class="p-4 text-center">${statusBadge}</td>
+                            <td class="p-4 text-center flex items-center justify-center gap-3">
+                                ${statusBadge}
+                                <button onclick="deleteItem('${item.sku}')" class="text-gray-400 hover:text-red-500 transition">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
                         </tr>
                     `;
                     tableBody.innerHTML += row;
@@ -117,6 +149,64 @@
             } catch (error) {
                 console.error('Error fetching inventory:', error);
                 document.getElementById('inventory-table-body').innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load data. Please check your backend connection.</td></tr>';
+            }
+        }
+
+        // --- Modal Controls ---
+        function openModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('addModal').classList.add('hidden');
+            document.getElementById('addForm').reset();
+        }
+
+        // --- POST: Add New Item ---
+        async function submitNewItem(event) {
+            event.preventDefault(); // Stop the page from reloading
+            
+            const payload = {
+                sku: document.getElementById('skuInput').value,
+                item_name: document.getElementById('nameInput').value,
+                category: document.getElementById('catInput').value,
+                current_stock: parseInt(document.getElementById('stockInput').value),
+                min_threshold: parseInt(document.getElementById('minInput').value)
+            };
+
+            try {
+                const response = await fetch('/api/inventory', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    closeModal();
+                    fetchInventory(); // Instantly refresh the table!
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to add item.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // --- DELETE: Remove Item ---
+        async function deleteItem(sku) {
+            if (!confirm(`Are you sure you want to delete ${sku}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/inventory/${sku}`, { 
+                    method: 'DELETE' 
+                });
+                
+                if (response.ok) {
+                    fetchInventory(); // Instantly refresh the table!
+                }
+            } catch (error) {
+                console.error('Error deleting item:', error);
             }
         }
 
