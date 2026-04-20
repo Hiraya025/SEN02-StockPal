@@ -1,6 +1,7 @@
 import os
 import psycopg2
 from flask import Flask, jsonify, request
+from flask import render_template
 from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
@@ -50,7 +51,7 @@ init_db()
 
 @app.route('/')
 def home():
-    return jsonify({"message": "StockPal API is running!"})
+    return render_template('index.html')
 
 # --- INVENTORY ROUTES ---
 
