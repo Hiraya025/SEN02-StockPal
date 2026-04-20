@@ -74,5 +74,61 @@ def get_inventory():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/inventory', methods=['POST'])
+def add_inventory():
+    """Adds a new item to the inventory."""
+    try:
+        data = request.json
+        
+        # Basic validation
+        if not data or not data.get('sku') or not data.get('item_name'):
+            return jsonify({"error": "SKU and Item Name are required"}), 400
+            
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Insert the new item
+        cur.execute('''
+            INSERT INTO inventory (sku, item_name, category, current_stock, min_threshold)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (
+            data['sku'], 
+            data['item_name'], 
+            data.get('category', ''), 
+            int(data.get('current_stock', 0)), 
+            int(data.get('min_threshold', 10))
+        ))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"message": "Item added successfully!", "sku": data['sku']}), 201
+    except psycopg2.IntegrityError:
+        return jsonify({"error": "An item with this SKU already exists."}), 409
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/inventory/<sku>', methods=['DELETE'])
+def delete_inventory(sku):
+    """Deletes an item from the inventory."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute('DELETE FROM inventory WHERE sku = %s', (sku,))
+        rows_deleted = cur.rowcount
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        if rows_deleted == 0:
+            return jsonify({"error": "Item not found."}), 404
+            
+        return jsonify({"message": f"Item {sku} deleted successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
