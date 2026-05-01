@@ -81,7 +81,7 @@
                         <option value="">All Categories</option>
                     </select>
 
-                    <button id="reportBtn" onclick="downloadReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
+                    <button onclick="downloadReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
                         <i class="fas fa-download mr-2"></i> Report
                     </button>
 
@@ -277,22 +277,19 @@
             }
         }
 
-function applyRoleBasedAccess() {
-    const role = getUserRole();
-    const addItemBtn = document.getElementById('addItemBtn');
-    const reportBtn = document.getElementById('reportBtn');
-    const deleteButtons = document.querySelectorAll('.delete-btn');
+        function applyRoleBasedAccess() {
+            const role = getUserRole();
+            const addItemBtn = document.getElementById('addItemBtn');
+            const deleteButtons = document.querySelectorAll('.delete-btn');
 
-    if (role !== 'admin') {
-        if (addItemBtn) addItemBtn.style.display = 'none';
-        if (reportBtn) reportBtn.style.display = 'none';
-        deleteButtons.forEach(btn => btn.style.display = 'none');
-    } else {
-        if (addItemBtn) addItemBtn.style.display = 'flex';
-        if (reportBtn) reportBtn.style.display = 'flex';
-        deleteButtons.forEach(btn => btn.style.display = 'inline-block');
-    }
-}
+            if (role !== 'admin') {
+                if (addItemBtn) addItemBtn.style.display = 'none';
+                deleteButtons.forEach(btn => btn.style.display = 'none');
+            } else {
+                if (addItemBtn) addItemBtn.style.display = 'flex';
+                deleteButtons.forEach(btn => btn.style.display = 'inline-block');
+            }
+        }
 
         // Login handling
         async function handleLogin(event) {
