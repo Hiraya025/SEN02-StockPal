@@ -185,5 +185,95 @@ def delete_inventory(sku):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/inventory/<sku>/movement', methods=['POST'])
+def record_movement(sku):
+    """Records a stock-in or stock-out and updates current stock transactionally."""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        quantity = data.get('quantity_changed')
+        movement_type = data.get('movement_type') # Expects 'stock-in' or 'stock-out'
+        
+        if not all([user_id, quantity, movement_type]):
+            return jsonify({"error": "user_id, quantity_changed, and movement_type are required"}), 400
+            
+        if movement_type not in ['stock-in', 'stock-out']:
+            return jsonify({"error": "movement_type must be 'stock-in' or 'stock-out'"}), 400
+
+        # Ensure quantity is positive for our math
+        quantity = abs(int(quantity))
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Verify item exists and check stock levels
+        cur.execute('SELECT current_stock FROM inventory WHERE sku = %s', (sku,))
+        item = cur.fetchone()
+        
+        if not item:
+            cur.close()
+            conn.close()
+            return jsonify({"error": "Item not found"}), 404
+            
+        if movement_type == 'stock-out' and item['current_stock'] < quantity:
+            cur.close()
+            conn.close()
+            return jsonify({"error": f"Insufficient stock. Current stock is {item['current_stock']}"}), 400
+            
+        # Determine the modifier for the SQL update
+        stock_modifier = quantity if movement_type == 'stock-in' else -quantity
+        
+        # 2. Update the inventory table
+        cur.execute('''
+            UPDATE inventory 
+            SET current_stock = current_stock + %s 
+            WHERE sku = %s
+        ''', (stock_modifier, sku))
+        
+        # 3. Log the movement
+        cur.execute('''
+            INSERT INTO stock_movements (sku, user_id, quantity_changed, movement_type)
+            VALUES (%s, %s, %s, %s)
+        ''', (sku, user_id, quantity, movement_type))
+        
+        # Commit the transaction (both update and insert succeed together)
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"message": f"Successfully processed {movement_type} for {sku}."}), 201
+        
+    except Exception as e:
+        # If anything fails, the connection closes without committing, acting as a rollback
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/movements', methods=['GET'])
+def get_movements():
+    """Fetches a complete history of stock movements for the frontend UI."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # JOIN with inventory and users to give the frontend readable names
+        query = '''
+            SELECT m.id, m.sku, i.item_name, m.user_id, u.username, 
+                   m.timestamp, m.quantity_changed, m.movement_type
+            FROM stock_movements m
+            LEFT JOIN inventory i ON m.sku = i.sku
+            LEFT JOIN users u ON m.user_id = u.id
+            ORDER BY m.timestamp DESC
+        '''
+        
+        cur.execute(query)
+        movements = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify(movements), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
