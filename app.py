@@ -1,28 +1,17 @@
 import os
-import csv
-import io
 import psycopg2
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request
 from flask import render_template
 from psycopg2.extras import RealDictCursor
-from flask_jwt_extended import (
-    JWTManager, create_access_token,
-    jwt_required, get_jwt_identity
-)
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key')
-
-jwt = JWTManager(app)
 
 # Fetch the database URL from Vercel's environment variables
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db_connection():
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL not set")
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return conn
 
 def init_db():
     """Creates the necessary tables when the app first runs."""
@@ -79,7 +68,6 @@ def home():
 # --- INVENTORY ROUTES ---
 
 @app.route('/api/inventory', methods=['GET'])
-@jwt_required()
 def get_inventory():
     """Fetches all items and flags the ones below minimum threshold."""
     try:
@@ -99,14 +87,9 @@ def get_inventory():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory', methods=['POST'])
-@jwt_required()
 def add_inventory():
     """Adds a new item to the inventory."""
     try:
-        user = get_jwt_identity()
-        if user['role'] != 'admin':
-            return jsonify({"error": "Unauthorized"}), 403
-        
         data = request.json
         
         # Basic validation
@@ -139,24 +122,18 @@ def add_inventory():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory/<sku>', methods=['PUT'])
-@jwt_required()
 def update_inventory(sku):
     """Updates an existing item in the inventory."""
     try:
-        user = get_jwt_identity()
-
-        # Optional RBAC (only admins can edit)
-        if user['role'] != 'admin':
-            return jsonify({"error": "Unauthorized"}), 403
-
         data = request.json
-
+        
         if not data:
             return jsonify({"error": "No update data provided"}), 400
             
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # Dynamically build the update query based on provided keys
         update_fields = []
         values = []
         
@@ -168,7 +145,7 @@ def update_inventory(sku):
                 values.append(data[key])
                 
         if not update_fields:
-            return jsonify({"error": "No valid fields provided"}), 400
+            return jsonify({"error": "No valid fields provided to update"}), 400
             
         values.append(sku)
         query = f"UPDATE inventory SET {', '.join(update_fields)} WHERE sku = %s"
@@ -181,23 +158,16 @@ def update_inventory(sku):
         conn.close()
         
         if rows_updated == 0:
-            return jsonify({"error": "Item not found"}), 404
+            return jsonify({"error": "Item not found."}), 404
             
         return jsonify({"message": f"Item {sku} updated successfully!"}), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory/<sku>', methods=['DELETE'])
-@jwt_required()
 def delete_inventory(sku):
     """Deletes an item from the inventory."""
     try:
-        user = get_jwt_identity()
-
-        if user['role'] != 'admin':
-            return jsonify({"error": "Unauthorized"}), 403
-
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -212,35 +182,26 @@ def delete_inventory(sku):
             return jsonify({"error": "Item not found."}), 404
             
         return jsonify({"message": f"Item {sku} deleted successfully!"}), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory/<sku>/movement', methods=['POST'])
-@jwt_required()
 def record_movement(sku):
     """Records a stock-in or stock-out and updates current stock transactionally."""
     try:
         data = request.json
-        user = get_jwt_identity()
-        user_id = user['id']
+        user_id = data.get('user_id')
         quantity = data.get('quantity_changed')
         movement_type = data.get('movement_type') # Expects 'stock-in' or 'stock-out'
         
-        if user['role'] not in ['admin', 'employee']:
-            return jsonify({"error": "Unauthorized"}), 403
-
-        if not all([quantity, movement_type]):
-            return jsonify({"error": "quantity_changed, and movement_type are required"}), 400
+        if not all([user_id, quantity, movement_type]):
+            return jsonify({"error": "user_id, quantity_changed, and movement_type are required"}), 400
             
         if movement_type not in ['stock-in', 'stock-out']:
             return jsonify({"error": "movement_type must be 'stock-in' or 'stock-out'"}), 400
 
         # Ensure quantity is positive for our math
         quantity = abs(int(quantity))
-
-        if quantity == 0:
-            return jsonify({"error": "Quantity must be greater than 0"}), 400
         
         conn = get_db_connection()
         cur = conn.cursor()
@@ -287,7 +248,6 @@ def record_movement(sku):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/movements', methods=['GET'])
-@jwt_required()
 def get_movements():
     """Fetches a complete history of stock movements for the frontend UI."""
     try:
@@ -312,99 +272,6 @@ def get_movements():
         
         return jsonify(movements), 200
         
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/register', methods=['POST'])
-def register():
-    data = request.json
-
-    username = data.get('username')
-    password = data.get('password')
-    
-    # 🔒 Prevent role abuse
-    role = 'employee'
-
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
-
-    if len(password) < 6:
-        return jsonify({"error": "Password must be at least 6 characters"}), 400
-
-    hashed_password = generate_password_hash(password)
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    try:
-        cur.execute('''
-            INSERT INTO users (username, password_hash, role)
-            VALUES (%s, %s, %s)
-        ''', (username, hashed_password, role))
-
-        conn.commit()
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-    finally:
-        cur.close()
-        conn.close()
-
-    return jsonify({"message": "User registered successfully"})
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-
-    username = data.get('username')
-    password = data.get('password')
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute('SELECT * FROM users WHERE username = %s', (username,))
-    user = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    if user and check_password_hash(user['password_hash'], password):
-        access_token = create_access_token(identity={
-            "id": user['id'],
-            "role": user['role']
-        })
-        return jsonify(access_token=access_token)
-
-    return jsonify({"error": "Invalid credentials"}), 401
-
-@app.route('/api/inventory/report', methods=['GET'])
-@jwt_required()
-def download_inventory_report():
-    """Generates and returns an inventory report in CSV format."""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM inventory;')
-        items = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        si = io.StringIO()
-        writer = csv.writer(si)
-        writer.writerow(['SKU', 'Item Name', 'Category', 'Current Stock', 'Min Threshold'])
-        for item in items:
-            writer.writerow([
-                item['sku'], 
-                item['item_name'], 
-                item['category'] or '', 
-                item['current_stock'], 
-                item['min_threshold']
-            ])
-        
-        output = si.getvalue()
-        response = make_response(output)
-        response.headers['Content-Disposition'] = 'attachment; filename=inventory_report.csv'
-        response.headers['Content-Type'] = 'text/csv'
-        return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
