@@ -41,6 +41,18 @@ def init_db():
             min_threshold INTEGER DEFAULT 10
         );
     ''')
+
+    # Create Stock Movements Table
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS stock_movements (
+            id SERIAL PRIMARY KEY,
+            sku VARCHAR(50) REFERENCES inventory(sku) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            quantity_changed INTEGER NOT NULL,
+            movement_type VARCHAR(20) NOT NULL
+        );
+    ''')
     
     conn.commit()
     cur.close()
@@ -106,6 +118,49 @@ def add_inventory():
         return jsonify({"message": "Item added successfully!", "sku": data['sku']}), 201
     except psycopg2.IntegrityError:
         return jsonify({"error": "An item with this SKU already exists."}), 409
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/inventory/<sku>', methods=['PUT'])
+def update_inventory(sku):
+    """Updates an existing item in the inventory."""
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No update data provided"}), 400
+            
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Dynamically build the update query based on provided keys
+        update_fields = []
+        values = []
+        
+        allowed_fields = ['item_name', 'category', 'current_stock', 'min_threshold']
+        
+        for key in allowed_fields:
+            if key in data:
+                update_fields.append(f"{key} = %s")
+                values.append(data[key])
+                
+        if not update_fields:
+            return jsonify({"error": "No valid fields provided to update"}), 400
+            
+        values.append(sku)
+        query = f"UPDATE inventory SET {', '.join(update_fields)} WHERE sku = %s"
+        
+        cur.execute(query, tuple(values))
+        rows_updated = cur.rowcount
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        if rows_updated == 0:
+            return jsonify({"error": "Item not found."}), 404
+            
+        return jsonify({"message": f"Item {sku} updated successfully!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
