@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StockPal | Dashboard</title>
-    
+
     <!-- External UI Assets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+
     <style>
         :root {
             --bg-main: #fcfcfd;
@@ -220,7 +220,7 @@
             try {
                 const response = await fetch('/api/inventory');
                 if (!response.ok) throw new Error('Database disconnected');
-                
+
                 const data = await response.json();
                 const tableBody = document.getElementById('inventory-table-body');
                 tableBody.innerHTML = '';
@@ -228,7 +228,7 @@
                 data.forEach(item => {
                     const badge = item.is_low_stock ? 'badge-low' : 'badge-ok';
                     const label = item.is_low_stock ? 'Low Stock' : 'Optimal';
-                    
+
                     tableBody.innerHTML += `
                         <tr>
                             <td class="ps-4">
