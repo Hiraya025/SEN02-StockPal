@@ -8,65 +8,30 @@
     <!-- External UI Assets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
-    <style>
-        :root {
-            --bg-main: #fcfcfd;
-            --sidebar-bg: #ffffff;
-            --accent-primary: #2563eb;
-            --text-main: #1e293b;
-            --border-soft: #f1f5f9;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-        }
-
-        /* Sidebar Design */
-        .sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-soft);
-            height: 100vh;
-            position: fixed;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            padding: 2rem;
-        }
-
-        /* Minimalist Cards */
-        .sp-card {
-            background: #ffffff;
-            border: 1px solid var(--border-soft);
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-
-        /* Form Styling */
-        .form-control-sp {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.6rem 1rem;
-        }
-
-        .form-control-sp:focus {
-            background-color: #fff;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-            outline: none;
-        }
-
-        /* Custom Badges */
-        .badge-low { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
-        .badge-ok { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-    </style>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+
+    <!-- Login Overlay (Member 1 Security + Member 3 Bootstrap) -->
+    <div id="loginPage" class="fixed-overlay d-flex align-items-center justify-content-center bg-light">
+        <div class="sp-card p-5 shadow-lg" style="width: 400px;">
+            <h3 class="fw-bold mb-4 text-primary"><i class="fas fa-lock me-2"></i>Login</h3>
+            <p id="loginError" class="text-danger small mb-3 d-none fw-bold"></p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Username</label>
+                    <input id="username" type="text" class="form-control-sp w-100" placeholder="Enter username" required>
+                </div>
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted">Password</label>
+                    <input id="password" type="password" class="form-control-sp w-100" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Log In</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Sidebar -->
     <aside class="sidebar d-none d-md-flex flex-column p-4">
@@ -74,55 +39,99 @@
             <h4 class="fw-bold text-primary"><i class="fas fa-boxes me-2"></i>StockPal</h4>
         </div>
         <nav class="nav flex-column gap-2">
-            <a href="#" class="nav-link active bg-light rounded-3 text-primary fw-bold p-3">
+            <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="nav-link active bg-light rounded-3 text-primary fw-bold p-3">
                 <i class="fas fa-chart-pie me-3"></i>Dashboard
             </a>
-            <a href="#" class="nav-link text-muted p-3">
-                <i class="fas fa-list me-3"></i>Inventory
-            </a>
-            <a href="#" class="nav-link text-muted p-3">
+            <a href="#" onclick="showView('movementView')" id="navMovements" class="nav-link text-muted p-3">
                 <i class="fas fa-history me-3"></i>Movements
             </a>
         </nav>
+        <div class="mt-auto px-2 border-top pt-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;">U</div>
+                <div>
+                    <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
+                    <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
+                </div>
+            </div>
+        </div>
     </aside>
 
     <!-- Main Content Area -->
     <main class="main-content">
-        <!-- Header Section -->
-        <div class="d-flex justify-content-between align-items-end mb-4">
-            <div>
-                <h2 class="fw-bold mb-1">Inventory Overview</h2>
-                <p class="text-muted mb-0">Monitor stock levels and system health.</p>
+        <!-- Dashboard View -->
+        <div id="dashboardView">
+            <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Inventory Overview</h2>
+                    <p class="text-muted mb-0">Monitor stock levels and system health.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="downloadReport()" class="btn btn-success px-4 py-2 rounded-3 shadow-sm">
+                        <i class="fas fa-download me-2"></i>Report
+                    </button>
+                    <button id="addItemBtn" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+                        <i class="fas fa-plus me-2"></i>Add New Item
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="fas fa-plus me-2"></i>Add New Item
-            </button>
+
+            <!-- Search Bar & Filters -->
+            <div class="sp-card p-3 mb-4 d-flex gap-3 flex-wrap">
+                <div class="input-group w-auto flex-grow-1">
+                    <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="inventorySearch" oninput="filterInventory()" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
+                </div>
+                <select id="categoryFilter" onchange="filterInventory()" class="form-select w-auto border-0 bg-light text-muted">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="sp-card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-muted small text-uppercase">
+                                <th class="ps-4 border-0">Item / SKU</th>
+                                <th class="border-0">Category</th>
+                                <th class="border-0">Current Level</th>
+                                <th class="border-0">Status</th>
+                                <th class="text-end pe-4 border-0">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <!-- Search Bar -->
-        <div class="sp-card p-3 mb-4">
-            <div class="input-group">
-                <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
-                <input type="text" id="inventorySearch" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
+        <!-- Movement View (Hidden by default) -->
+        <div id="movementView" class="d-none">
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Stock Movement Logs</h2>
+                <p class="text-muted mb-0">Audit trail for all stock transactions.</p>
             </div>
-        </div>
-
-        <!-- Inventory Table Card -->
-        <div class="sp-card overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr class="text-muted small text-uppercase">
-                            <th class="ps-4 border-0">Item / SKU</th>
-                            <th class="border-0">Current Level</th>
-                            <th class="border-0">Status</th>
-                            <th class="text-end pe-4 border-0">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-table-body">
-                        <!-- Populated by JavaScript -->
-                    </tbody>
-                </table>
+            <div class="sp-card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-muted small text-uppercase">
+                                <th class="ps-4 border-0">Timestamp</th>
+                                <th class="border-0">SKU</th>
+                                <th class="border-0">Item Name</th>
+                                <th class="border-0">User</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movements-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
@@ -145,6 +154,10 @@
                             <label class="small fw-bold text-muted mb-1">ITEM NAME</label>
                             <input type="text" id="nameInput" class="form-control-sp w-100" placeholder="e.g. Ergonomic Chair" required>
                         </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">CATEGORY</label>
+                            <input type="text" id="catInput" class="form-control-sp w-100" placeholder="e.g. Furniture">
+                        </div>
                         <div class="row g-3 mb-4">
                             <div class="col-6">
                                 <label class="small fw-bold text-muted mb-1">INITIAL STOCK</label>
@@ -162,7 +175,7 @@
         </div>
     </div>
 
-    <!-- Modal: Edit Item (Task 1) -->
+    <!-- Modal: Edit Item -->
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 20px;">
@@ -188,7 +201,7 @@
         </div>
     </div>
 
-    <!-- Modal: Stock Movement (Task 2) -->
+    <!-- Modal: Stock Movement -->
     <div class="modal fade" id="movementModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 20px;">
@@ -211,151 +224,8 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // --- 1. Fetch & Display Data ---
-        async function fetchInventory() {
-            try {
-                const response = await fetch('/api/inventory');
-                if (!response.ok) throw new Error('Database disconnected');
-
-                const data = await response.json();
-                const tableBody = document.getElementById('inventory-table-body');
-                tableBody.innerHTML = '';
-
-                data.forEach(item => {
-                    const badge = item.is_low_stock ? 'badge-low' : 'badge-ok';
-                    const label = item.is_low_stock ? 'Low Stock' : 'Optimal';
-
-                    tableBody.innerHTML += `
-                        <tr>
-                            <td class="ps-4">
-                                <div class="fw-bold">${item.item_name}</div>
-                                <div class="small text-muted">${item.sku}</div>
-                            </td>
-                            <td><span class="fw-bold">${item.current_stock}</span> <small class='text-muted'>/ ${item.min_threshold}</small></td>
-                            <td><span class="badge ${badge} px-3 py-2 rounded-pill">${label}</span></td>
-                            <td class="text-end pe-4">
-                                <div class="btn-group gap-1">
-                                    <button onclick="prepMove('${item.sku}', 'IN')" class="btn btn-sm btn-outline-success border-0" title="Stock In"><i class="fas fa-plus"></i></button>
-                                    <button onclick="prepMove('${item.sku}', 'OUT')" class="btn btn-sm btn-outline-danger border-0" title="Stock Out"><i class="fas fa-minus"></i></button>
-                                    <button onclick="prepEdit('${item.sku}', '${item.item_name}', ${item.min_threshold})" class="btn btn-sm btn-light border-0" title="Edit"><i class="fas fa-edit"></i></button>
-                                    <button onclick="deleteItem('${item.sku}')" class="btn btn-sm btn-light border-0 text-danger" title="Delete"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            } catch (error) { 
-                console.error("Backend Error:", error); 
-            }
-        }
-
-        // --- 2. Create Logic ---
-        async function submitNewItem(e) {
-            e.preventDefault();
-            const payload = {
-                sku: document.getElementById('skuInput').value,
-                item_name: document.getElementById('nameInput').value,
-                current_stock: parseInt(document.getElementById('stockInput').value),
-                min_threshold: parseInt(document.getElementById('minInput').value)
-            };
-
-            try {
-                const response = await fetch('/api/inventory', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
-                    document.getElementById('addForm').reset();
-                    fetchInventory();
-                }
-            } catch (error) { console.error(error); }
-        }
-
-        // --- 3. Edit Logic (Task 1) ---
-        function prepEdit(sku, name, min) {
-            document.getElementById('editSku').value = sku;
-            document.getElementById('editName').value = name;
-            document.getElementById('editMin').value = min;
-            new bootstrap.Modal(document.getElementById('editModal')).show();
-        }
-
-        async function updateItem(e) {
-            e.preventDefault();
-            const sku = document.getElementById('editSku').value;
-            const payload = {
-                item_name: document.getElementById('editName').value,
-                min_threshold: parseInt(document.getElementById('editMin').value)
-            };
-
-            try {
-                const response = await fetch(`/api/inventory/${sku}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                    fetchInventory();
-                }
-            } catch (error) { console.error(error); }
-        }
-
-        // --- 4. Stock Movement Logic (Task 2) ---
-        function prepMove(sku, type) {
-            document.getElementById('moveSku').value = sku;
-            document.getElementById('moveType').value = type;
-            document.getElementById('moveTitle').innerText = type === 'IN' ? 'Stock-In' : 'Stock-Out';
-            const btn = document.getElementById('moveSubmitBtn');
-            btn.className = type === 'IN' ? 'btn btn-success w-100 py-2' : 'btn btn-danger w-100 py-2';
-            new bootstrap.Modal(document.getElementById('movementModal')).show();
-        }
-
-        async function submitMovement(e) {
-            e.preventDefault();
-            const sku = document.getElementById('moveSku').value;
-            const payload = {
-                type: document.getElementById('moveType').value,
-                quantity: parseInt(document.getElementById('moveQty').value)
-            };
-
-            try {
-                const response = await fetch(`/api/inventory/${sku}/movement`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('movementModal')).hide();
-                    document.getElementById('moveForm').reset();
-                    fetchInventory();
-                }
-            } catch (error) { console.error(error); }
-        }
-
-        // --- 5. Delete Logic ---
-        async function deleteItem(sku) {
-            if (!confirm(`Permanently delete ${sku}?`)) return;
-            try {
-                const response = await fetch(`/api/inventory/${sku}`, { method: 'DELETE' });
-                if (response.ok) fetchInventory();
-            } catch (error) { console.error(error); }
-        }
-
-        // --- 6. Search Filter (Task 4) ---
-        document.getElementById('inventorySearch').addEventListener('keyup', function() {
-            const query = this.value.toLowerCase();
-            document.querySelectorAll('#inventory-table-body tr').forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
-            });
-        });
-
-        // Initialize on Load
-        document.addEventListener('DOMContentLoaded', fetchInventory);
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
