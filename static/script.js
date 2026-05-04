@@ -18,9 +18,7 @@ async function apiFetch(url, options = {}) {
     const response = await fetch(url, options);
     
     if (response.status === 401) {
-        localStorage.removeItem('token');
-        document.getElementById('loginPage').classList.remove('d-none');
-        document.getElementById('appContainer').classList.add('d-none');
+        handleLogout();
         throw new Error("Session expired or unauthorized. Please log in again.");
     }
     
@@ -101,6 +99,7 @@ async function handleLogin(event) {
             document.getElementById('appContainer').classList.remove('d-none');
             
             document.getElementById('userDisplay').textContent = username;
+            document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
             
             applyRoleBasedAccess(); 
             fetchInventory();
@@ -114,13 +113,20 @@ async function handleLogin(event) {
     }
 }
 
+function handleLogout() {
+    localStorage.removeItem('token');
+    document.getElementById('loginPage').classList.remove('d-none');
+    document.getElementById('appContainer').classList.add('d-none');
+    document.getElementById('loginForm').reset();
+    showView('dashboardView'); // Reset to default view for next login
+}
+
 // --- Inventory Logic ---
 async function fetchInventory() {
     const token = localStorage.getItem('token');
     
     if (!token) {
-        document.getElementById('loginPage').classList.remove('d-none');
-        document.getElementById('appContainer').classList.add('d-none');
+        handleLogout();
         return;
     }
 
