@@ -80,31 +80,36 @@ _Note: If the database is completely empty upon startup, the system will automat
 To ensure high software quality, maintainability, and security, we implemented an automated test suite using pytest. The tests heavily utilize the unittest.mock library to simulate database connections and interactions, allowing us to test our API logic and Role-Based Access Control (RBAC) in isolation without risking database corruption.
 
 ### Automated Test Execution Output
-Below is the console output from our final test run, verifying that all core functionalities perform as expected.
+Below is the console output from our final test run, verifying that all core functionalities, access controls, and edge cases perform as expected.
 ```Shell
-$ pytest test_app.py -v
-============================= test session starts ==============================
-platform win32 -- Python 3.10.2, pytest-8.1.1, pluggy-1.4.0 -- c:\StockPal\venv\scripts\python.exe
+$ python -m pytest test_app.py -v
+======================== test session starts =========================
+platform win32 -- Python 3.14.0, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\robrob\AppData\Local\Python\pythoncore-3.14-64\python.exe
 cachedir: .pytest_cache
-rootdir: c:\StockPal
-plugins: jwt-extended-1.0.0
-collected 5 items
+rootdir: C:\ROB\SEN02\SEN02-StockPal
+collected 8 items                                                     
 
-test_app.py::test_get_inventory_and_low_stock_logic PASSED               [ 20%]
-test_app.py::test_add_inventory_admin PASSED                             [ 40%]
-test_app.py::test_add_inventory_employee_unauthorized PASSED             [ 60%]
-test_app.py::test_download_inventory_report PASSED                       [ 80%]
-test_app.py::test_delete_inventory_item PASSED                           [100%]
+test_app.py::test_unauthenticated_access PASSED                 [ 12%]
+test_app.py::test_get_inventory_and_low_stock_logic PASSED      [ 25%]
+test_app.py::test_add_inventory_admin PASSED                    [ 37%]
+test_app.py::test_add_inventory_duplicate_sku PASSED            [ 50%]
+test_app.py::test_add_inventory_employee_unauthorized PASSED    [ 62%]
+test_app.py::test_download_inventory_report PASSED              [ 75%]
+test_app.py::test_delete_inventory_item PASSED                  [ 87%]
+test_app.py::test_record_stock_movement_audit PASSED            [100%]
 
-============================== 5 passed in 0.42s ===============================
+========================= 8 passed in 0.47s ==========================
 ```
 
 ### Testing Breakdown:
-  1. test_get_inventory_and_low_stock_logic: Validates that the GET /api/inventory route successfully retrieves items and correctly calculates the is_low_stock boolean flag based on current stock vs. threshold.
-  2. test_add_inventory_admin: Verifies that a user with an admin JWT claim can successfully POST new items to the database and receives a 201 Created response.
-  3. test_add_inventory_employee_unauthorized: Validates our RBAC security protocol. Ensures that if an employee attempts to execute an admin-level POST request, the API blocks the action and returns a 403 Forbidden error.
-  4. test_download_inventory_report: Confirms the CSV export functionality properly formats the database records and returns the correct text/csv headers.
-  5. test_delete_inventory_item: Ensures the DELETE endpoint safely removes items and triggers the correct database commit sequence.
+  1. test_unauthenticated_access: Validates that the API strictly blocks requests to protected routes if no JWT is provided, returning a 401 Unauthorized error.
+  2. test_get_inventory_and_low_stock_logic: Validates that the GET /api/inventory route successfully retrieves items and correctly calculates the is_low_stock boolean flag based on current stock vs. threshold.
+  3. test_add_inventory_admin: Verifies that a user with an admin JWT claim can successfully POST new items to the database and receives a 201 Created response.
+  4. test_add_inventory_duplicate_sku: Tests edge-case database handling; ensures that attempting to add an existing SKU gracefully throws a 409 Conflict error and rolls back the transaction without crashing the server.
+  5. test_add_inventory_employee_unauthorized: Validates our RBAC security protocol. Ensures that if an employee attempts to execute an admin-level POST request, the API blocks the action and returns a 403 Forbidden error.
+  6. test_download_inventory_report: Confirms the CSV export functionality properly formats the database records and returns the correct text/csv headers for immediate browser download.
+  7. test_delete_inventory_item: Ensures the DELETE endpoint safely removes items and triggers the correct database commit sequence.
+  8. test_record_stock_movement_audit: Proves that when an employee executes a stock movement, the system successfully extracts their user_id from the JWT payload and securely binds it to the immutable audit log in the database.
 
 ---
 
