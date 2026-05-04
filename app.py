@@ -7,13 +7,12 @@ from flask import render_template
 from psycopg2.extras import RealDictCursor
 from flask_jwt_extended import (
     JWTManager, create_access_token,
-    jwt_required, get_jwt_identity
+    jwt_required, get_jwt_identity, get_jwt
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# FIX: Ensure app fails to start if production secret is missing
 secret = os.environ.get('JWT_SECRET_KEY')
 if not secret:
     raise ValueError("No JWT_SECRET_KEY set for Flask application")
@@ -29,7 +28,6 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def init_db():
-    """Creates the necessary tables when the app first runs."""
     if not DATABASE_URL:
         return
         
@@ -71,7 +69,6 @@ def init_db():
         cur.close()
         conn.close()
 
-# INTENTIONALLY UNFIXED: Left global initialization intact
 init_db()
 
 @app.route('/')
@@ -98,7 +95,6 @@ def get_inventory():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        # FIX: Ensure DB connections are closed safely
         if cur: cur.close()
         if conn: conn.close()
 
@@ -108,8 +104,8 @@ def add_inventory():
     conn = None
     cur = None
     try:
-        user = get_jwt_identity()
-        if user['role'] != 'admin':
+        claims = get_jwt()
+        if claims.get('role') != 'admin':
             return jsonify({"error": "Unauthorized"}), 403
         
         data = request.json
@@ -148,8 +144,8 @@ def update_inventory(sku):
     conn = None
     cur = None
     try:
-        user = get_jwt_identity()
-        if user['role'] != 'admin':
+        claims = get_jwt()
+        if claims.get('role') != 'admin':
             return jsonify({"error": "Unauthorized"}), 403
 
         data = request.json
@@ -196,8 +192,8 @@ def delete_inventory(sku):
     conn = None
     cur = None
     try:
-        user = get_jwt_identity()
-        if user['role'] != 'admin':
+        claims = get_jwt()
+        if claims.get('role') != 'admin':
             return jsonify({"error": "Unauthorized"}), 403
 
         conn = get_db_connection()
@@ -226,12 +222,12 @@ def record_movement(sku):
     cur = None
     try:
         data = request.json
-        user = get_jwt_identity()
-        user_id = user['id']
+        claims = get_jwt()
+        user_id = claims.get('id')
         raw_quantity = data.get('quantity_changed')
         movement_type = data.get('movement_type')
         
-        if user['role'] not in ['admin', 'employee']:
+        if claims.get('role') not in ['admin', 'employee']:
             return jsonify({"error": "Unauthorized"}), 403
 
         if not raw_quantity or not movement_type:
@@ -240,7 +236,6 @@ def record_movement(sku):
         if movement_type not in ['stock-in', 'stock-out']:
             return jsonify({"error": "movement_type must be 'stock-in' or 'stock-out'"}), 400
 
-        # FIX: Catch ValueError when parsing quantity
         try:
             quantity = abs(int(raw_quantity))
         except (ValueError, TypeError):
@@ -317,9 +312,6 @@ def register():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    
-    # FIX: Allow dynamic role assignment instead of hardcoding 'employee'
-    # Defaulting to 'employee' if not provided in payload.
     role = data.get('role', 'employee')
 
     if not username or not password:
@@ -367,10 +359,14 @@ def login():
         if conn: conn.close()
 
     if user and check_password_hash(user['password_hash'], password):
-        access_token = create_access_token(identity={
-            "id": user['id'],
-            "role": user['role']
-        })
+        # FIX: Pass string to identity, and pass dict to additional_claims
+        access_token = create_access_token(
+            identity=str(user['username']),
+            additional_claims={
+                "id": user['id'],
+                "role": user['role']
+            }
+        )
         return jsonify(access_token=access_token)
 
     return jsonify({"error": "Invalid credentials"}), 401
