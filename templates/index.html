@@ -33,108 +33,113 @@
         </div>
     </div>
 
-    <!-- Sidebar -->
-    <aside class="sidebar d-none d-md-flex flex-column p-4">
-        <div class="mb-5 px-2">
-            <h4 class="fw-bold text-primary"><i class="fas fa-boxes me-2"></i>StockPal</h4>
-        </div>
-        <nav class="nav flex-column gap-2">
-            <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="nav-link active bg-light rounded-3 text-primary fw-bold p-3">
-                <i class="fas fa-chart-pie me-3"></i>Dashboard
-            </a>
-            <a href="#" onclick="showView('movementView')" id="navMovements" class="nav-link text-muted p-3">
-                <i class="fas fa-history me-3"></i>Movements
-            </a>
-        </nav>
-        <div class="mt-auto px-2 border-top pt-4">
-            <div class="d-flex align-items-center">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;">U</div>
-                <div>
-                    <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
-                    <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
-                </div>
-            </div>
-        </div>
-    </aside>
+    <!-- WRAPPER FOR AUTHENTICATED CONTENT (Hidden by default) -->
+    <div id="appContainer" class="d-none">
 
-    <!-- Main Content Area -->
-    <main class="main-content">
-        <!-- Dashboard View -->
-        <div id="dashboardView">
-            <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-                <div>
-                    <h2 class="fw-bold mb-1">Inventory Overview</h2>
-                    <p class="text-muted mb-0">Monitor stock levels and system health.</p>
+        <!-- Sidebar -->
+        <aside class="sidebar d-none d-md-flex flex-column p-4">
+            <div class="mb-5 px-2">
+                <h4 class="fw-bold text-primary"><i class="fas fa-boxes me-2"></i>StockPal</h4>
+            </div>
+            <nav class="nav flex-column gap-2">
+                <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="nav-link active bg-light rounded-3 text-primary fw-bold p-3">
+                    <i class="fas fa-chart-pie me-3"></i>Dashboard
+                </a>
+                <a href="#" onclick="showView('movementView')" id="navMovements" class="nav-link text-muted p-3">
+                    <i class="fas fa-history me-3"></i>Movements
+                </a>
+            </nav>
+            <div class="mt-auto px-2 border-top pt-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;">U</div>
+                    <div>
+                        <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
+                        <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button onclick="downloadReport()" class="btn btn-success px-4 py-2 rounded-3 shadow-sm">
-                        <i class="fas fa-download me-2"></i>Report
-                    </button>
-                    <button id="addItemBtn" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
-                        <i class="fas fa-plus me-2"></i>Add New Item
-                    </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboardView">
+                <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+                    <div>
+                        <h2 class="fw-bold mb-1">Inventory Overview</h2>
+                        <p class="text-muted mb-0">Monitor stock levels and system health.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button onclick="downloadReport()" class="btn btn-success px-4 py-2 rounded-3 shadow-sm">
+                            <i class="fas fa-download me-2"></i>Report
+                        </button>
+                        <button id="addItemBtn" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+                            <i class="fas fa-plus me-2"></i>Add New Item
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Bar & Filters -->
+                <div class="sp-card p-3 mb-4 d-flex gap-3 flex-wrap">
+                    <div class="input-group w-auto flex-grow-1">
+                        <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" id="inventorySearch" oninput="filterInventory()" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
+                    </div>
+                    <select id="categoryFilter" onchange="filterInventory()" class="form-select w-auto border-0 bg-light text-muted">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <!-- Inventory Table -->
+                <div class="sp-card overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr class="text-muted small text-uppercase">
+                                    <th class="ps-4 border-0">Item / SKU</th>
+                                    <th class="border-0">Category</th>
+                                    <th class="border-0">Current Level</th>
+                                    <th class="border-0">Status</th>
+                                    <th class="text-end pe-4 border-0">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Search Bar & Filters -->
-            <div class="sp-card p-3 mb-4 d-flex gap-3 flex-wrap">
-                <div class="input-group w-auto flex-grow-1">
-                    <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
-                    <input type="text" id="inventorySearch" oninput="filterInventory()" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
+            <!-- Movement View (Hidden by default) -->
+            <div id="movementView" class="d-none">
+                <div class="mb-4">
+                    <h2 class="fw-bold mb-1">Stock Movement Logs</h2>
+                    <p class="text-muted mb-0">Audit trail for all stock transactions.</p>
                 </div>
-                <select id="categoryFilter" onchange="filterInventory()" class="form-select w-auto border-0 bg-light text-muted">
-                    <option value="">All Categories</option>
-                </select>
+                <div class="sp-card overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr class="text-muted small text-uppercase">
+                                    <th class="ps-4 border-0">Timestamp</th>
+                                    <th class="border-0">SKU</th>
+                                    <th class="border-0">Item Name</th>
+                                    <th class="border-0">User</th>
+                                    <th class="border-0">Type</th>
+                                    <th class="border-0">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movements-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+        </main>
 
-            <!-- Inventory Table -->
-            <div class="sp-card overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr class="text-muted small text-uppercase">
-                                <th class="ps-4 border-0">Item / SKU</th>
-                                <th class="border-0">Category</th>
-                                <th class="border-0">Current Level</th>
-                                <th class="border-0">Status</th>
-                                <th class="text-end pe-4 border-0">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventory-table-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Movement View (Hidden by default) -->
-        <div id="movementView" class="d-none">
-            <div class="mb-4">
-                <h2 class="fw-bold mb-1">Stock Movement Logs</h2>
-                <p class="text-muted mb-0">Audit trail for all stock transactions.</p>
-            </div>
-            <div class="sp-card overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr class="text-muted small text-uppercase">
-                                <th class="ps-4 border-0">Timestamp</th>
-                                <th class="border-0">SKU</th>
-                                <th class="border-0">Item Name</th>
-                                <th class="border-0">User</th>
-                                <th class="border-0">Type</th>
-                                <th class="border-0">Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="movements-table-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
+    </div> <!-- END OF APP CONTAINER -->
 
     <!-- Modal: Add Item -->
     <div class="modal fade" id="addModal" tabindex="-1">
