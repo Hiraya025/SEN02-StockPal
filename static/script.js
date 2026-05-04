@@ -1,6 +1,6 @@
 let allItems = [];
 
-// FIX: Centralized fetch wrapper to handle 401 Unauthorized globally
+// Centralized fetch wrapper to handle 401 Unauthorized globally
 async function apiFetch(url, options = {}) {
     const token = localStorage.getItem('token');
     const headers = new Headers(options.headers || {});
@@ -20,6 +20,7 @@ async function apiFetch(url, options = {}) {
     if (response.status === 401) {
         localStorage.removeItem('token');
         document.getElementById('loginPage').classList.remove('d-none');
+        document.getElementById('appContainer').classList.add('d-none');
         throw new Error("Session expired or unauthorized. Please log in again.");
     }
     
@@ -93,10 +94,13 @@ async function handleLogin(event) {
         if (response.ok) {
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
+            
+            // Switch views
             document.getElementById('loginPage').classList.add('d-none');
+            document.getElementById('appContainer').classList.remove('d-none');
+            
             document.getElementById('userDisplay').textContent = username;
             
-            // FIX: Call applyRoleBasedAccess immediately after token is set to prevent UI flicker/delay
             applyRoleBasedAccess(); 
             fetchInventory();
         } else {
@@ -112,10 +116,16 @@ async function handleLogin(event) {
 // --- Inventory Logic ---
 async function fetchInventory() {
     const token = localStorage.getItem('token');
+    
     if (!token) {
         document.getElementById('loginPage').classList.remove('d-none');
+        document.getElementById('appContainer').classList.add('d-none');
         return;
     }
+
+    // Ensure dashboard is visible if token exists on load
+    document.getElementById('loginPage').classList.add('d-none');
+    document.getElementById('appContainer').classList.remove('d-none');
 
     try {
         const response = await apiFetch('/api/inventory');
