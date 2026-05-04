@@ -38,15 +38,12 @@
         <div class="mb-5 px-2">
             <h4 class="fw-bold text-primary"><i class="fas fa-boxes me-2"></i>StockPal</h4>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="flex items-center p-3 text-blue-700 bg-blue-50 rounded-lg font-medium">
-                <i class="fas fa-chart-line mr-3"></i> Dashboard
+        <nav class="nav flex-column gap-2">
+            <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="nav-link active bg-light rounded-3 text-primary fw-bold p-3">
+                <i class="fas fa-chart-pie me-3"></i>Dashboard
             </a>
-            <a href="#" onclick="showView('dashboardView')" class="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition">
-                <i class="fas fa-clipboard-list mr-3"></i> Inventory
-            </a>
-            <a href="#" onclick="showView('movementView')" id="navMovements" class="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition">
-                <i class="fas fa-exchange-alt mr-3"></i> Stock Movement
+            <a href="#" onclick="showView('movementView')" id="navMovements" class="nav-link text-muted p-3">
+                <i class="fas fa-history me-3"></i>Movements
             </a>
         </nav>
         <div class="mt-auto px-2 border-top pt-4">
@@ -60,40 +57,11 @@
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <div id="loginPage" class="fixed inset-0 bg-gray-50 flex items-center justify-center z-50">
-            <div class="bg-white p-8 rounded-xl shadow-lg w-96 border border-gray-100">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800">
-                    <i class="fas fa-lock mr-2 text-blue-600"></i>Login
-                </h2>
-        
-                <p id="loginError" class="text-red-600 text-sm mb-4 hidden font-medium"></p>
-        
-                <form id="loginForm" onsubmit="handleLogin(event)">
-                    <div class="mb-4">
-                        <label class="block text-xs text-gray-500 mb-1">Username</label>
-                        <input id="username" type="text" placeholder="Enter your username" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
-            
-                    <div class="mb-6">
-                        <label class="block text-xs text-gray-500 mb-1">Password</label>
-                        <input id="password" type="password" placeholder="Enter your password" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
-            
-                    <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-sm">
-                        Log In
-                    </button>
-                </form>
-            </div>
-        </div>
-        
-        <header class="bg-white shadow-sm p-4 flex justify-between items-center md:hidden">
-            <h1 class="text-xl font-bold text-blue-600"><i class="fas fa-boxes mr-2"></i>StockPal</h1>
-            <button class="text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-xl"></i></button>
-        </header>
-
-        <div id="dashboardView" class="p-6 md:p-8 max-w-7xl mx-auto w-full">
-            <div class="flex justify-between items-end mb-8 flex-wrap gap-4">
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Dashboard View -->
+        <div id="dashboardView">
+            <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
                 <div>
                     <h2 class="fw-bold mb-1">Inventory Overview</h2>
                     <p class="text-muted mb-0">Monitor stock levels and system health.</p>
@@ -114,34 +82,22 @@
                     <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
                     <input type="text" id="inventorySearch" oninput="filterInventory()" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
                 </div>
-
-                <div class="flex items-center gap-3 flex-wrap">
-                    <input type="text" id="searchInput" oninput="filterInventory()" placeholder="Search SKU or Name..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-64">
-                    
-                    <select id="categoryFilter" onchange="filterInventory()" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
-                        <option value="">All Categories</option>
-                    </select>
-
-                    <button onclick="downloadReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
-                        <i class="fas fa-download mr-2"></i> Report
-                    </button>
-
-                    <button id="addItemBtn" onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm flex items-center">
-                        <i class="fas fa-plus mr-2"></i> Add Item
-                    </button>
-                </div>
+                <select id="categoryFilter" onchange="filterInventory()" class="form-select w-auto border-0 bg-light text-muted">
+                    <option value="">All Categories</option>
+                </select>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
-                                <th class="p-4 font-medium">SKU</th>
-                                <th class="p-4 font-medium">Item Name</th>
-                                <th class="p-4 font-medium">Category</th>
-                                <th class="p-4 font-medium">Stock Level</th>
-                                <th class="p-4 font-medium text-center">Actions</th>
+            <!-- Inventory Table -->
+            <div class="sp-card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-muted small text-uppercase">
+                                <th class="ps-4 border-0">Item / SKU</th>
+                                <th class="border-0">Category</th>
+                                <th class="border-0">Current Level</th>
+                                <th class="border-0">Status</th>
+                                <th class="text-end pe-4 border-0">Action</th>
                             </tr>
                         </thead>
                         <tbody id="inventory-table-body">
@@ -174,31 +130,6 @@
                         <tbody id="movements-table-body">
                             <!-- Populated by JS -->
                         </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="movementView" class="p-6 md:p-8 max-w-7xl mx-auto w-full hidden">
-            <div class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-800">Stock Movement Logs</h2>
-                <p class="text-gray-600 mt-1">Audit trail for all stock transactions.</p>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
-                                <th class="p-4 font-medium">Timestamp</th>
-                                <th class="p-4 font-medium">SKU</th>
-                                <th class="p-4 font-medium">Item Name</th>
-                                <th class="p-4 font-medium">User</th>
-                                <th class="p-4 font-medium">Type</th>
-                                <th class="p-4 font-medium">Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="movements-table-body" class="divide-y divide-gray-100">
-                            </tbody>
                     </table>
                 </div>
             </div>
@@ -244,459 +175,57 @@
         </div>
     </div>
 
-    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-xl shadow-lg w-96">
-            <h3 class="text-xl font-bold mb-4">Edit Item</h3>
-            <form id="editForm" onsubmit="submitEditItem(event)">
-                <input type="hidden" id="editSku">
-                <input type="text" id="editNameInput" placeholder="Item Name" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                <input type="text" id="editCatInput" placeholder="Category" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
-                
-                <div class="flex gap-3 mb-5">
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 mb-1 block">Current Stock</label>
-                        <input type="number" id="editStockInput" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 mb-1 block">Min Threshold</label>
-                        <input type="number" id="editMinInput" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
+    <!-- Modal: Edit Item -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 20px;">
+                <div class="modal-header border-0">
+                    <h5 class="fw-bold text-primary">Edit Item Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save Changes</button>
+                <div class="modal-body">
+                    <form id="editForm" onsubmit="updateItem(event)">
+                        <input type="hidden" id="editSku">
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">ITEM NAME</label>
+                            <input type="text" id="editName" class="form-control-sp w-100" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="small fw-bold text-muted mb-1">MIN THRESHOLD</label>
+                            <input type="number" id="editMin" class="form-control-sp w-100">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2">Save Changes</button>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <div id="movementModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-xl shadow-lg w-96">
-            <h3 id="movementTitle" class="text-xl font-bold mb-4">Record Movement</h3>
-            <form id="movementForm" onsubmit="submitMovement(event)">
-                <input type="hidden" id="movementSku">
-                <input type="hidden" id="movementTypeInput">
-                <div class="mb-4">
-                    <label class="text-xs text-gray-500 mb-1 block">Quantity</label>
-                    <input type="number" id="movementQuantity" placeholder="Quantity" min="1" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
+    <!-- Modal: Stock Movement -->
+    <div class="modal fade" id="movementModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 20px;">
+                <div class="modal-header border-0">
+                    <h5 class="fw-bold" id="moveTitle">Stock Movement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeMovementModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Confirm</button>
+                <div class="modal-body">
+                    <form id="moveForm" onsubmit="submitMovement(event)">
+                        <input type="hidden" id="moveSku">
+                        <input type="hidden" id="moveType">
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">QUANTITY</label>
+                            <input type="number" id="moveQty" class="form-control-sp w-100" min="1" value="1" required>
+                        </div>
+                        <button type="submit" id="moveSubmitBtn" class="btn w-100 py-2 text-white">Confirm</button>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <script>
-        let allItems = [];
-
-        function showView(viewId) {
-            const views = ['dashboardView', 'movementView'];
-            views.forEach(v => {
-                const el = document.getElementById(v);
-                if (v === viewId) {
-                    el.classList.remove('hidden');
-                } else {
-                    el.classList.add('hidden');
-                }
-            });
-
-            const navDashboard = document.getElementById('navDashboard');
-            const navMovements = document.getElementById('navMovements');
-            if (viewId === 'dashboardView') {
-                navDashboard.className = "flex items-center p-3 text-blue-700 bg-blue-50 rounded-lg font-medium";
-                navMovements.className = "flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition";
-                fetchInventory();
-            } else {
-                navMovements.className = "flex items-center p-3 text-blue-700 bg-blue-50 rounded-lg font-medium";
-                navDashboard.className = "flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition";
-                fetchMovements();
-            }
-        }
-
-        async function downloadReport() {
-            try {
-                const response = await fetch('/api/inventory/report', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'inventory_report.csv';
-                    a.click();
-                } else {
-                    alert('Failed to download report.');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function getUserRole() {
-            const token = localStorage.getItem('token');
-            if (!token) return null;
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                
-                const parsed = JSON.parse(jsonPayload);
-                // Flask-JWT-Extended wraps identity in a 'sub' key
-                return parsed.sub ? parsed.sub.role : parsed.role;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function applyRoleBasedAccess() {
-            const role = getUserRole();
-            const addItemBtn = document.getElementById('addItemBtn');
-            const deleteButtons = document.querySelectorAll('.delete-btn');
-
-            if (role !== 'admin') {
-                if (addItemBtn) addItemBtn.style.display = 'none';
-                deleteButtons.forEach(btn => btn.style.display = 'none');
-            } else {
-                if (addItemBtn) addItemBtn.style.display = 'flex';
-                deleteButtons.forEach(btn => btn.style.display = 'inline-block');
-            }
-        }
-
-        // Login handling
-        async function handleLogin(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorText = document.getElementById('loginError');
-
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    localStorage.setItem('token', data.access_token);
-                    document.getElementById('loginPage').classList.add('hidden');
-                    fetchInventory();
-                } else {
-                    const errorData = await response.json();
-                    errorText.textContent = errorData.error || 'Invalid credentials.';
-                    errorText.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                errorText.textContent = 'Failed to connect to the backend.';
-                errorText.classList.remove('hidden');
-            }
-        }
-
-        async function fetchInventory() {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    document.getElementById('loginPage').classList.remove('hidden');
-                    return;
-                }
-
-                const response = await fetch('/api/inventory', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    document.getElementById('loginPage').classList.remove('hidden');
-                    return;
-                }
-
-                const data = await response.json();
-                allItems = data;
-
-                const select = document.getElementById('categoryFilter');
-                if (select && select.options.length === 1) {
-                    const categories = [...new Set(data.map(i => i.category).filter(Boolean))];
-                    categories.forEach(cat => {
-                        const opt = document.createElement('option');
-                        opt.value = cat;
-                        opt.textContent = cat;
-                        select.appendChild(opt);
-                    });
-                }
-
-                renderInventoryTable(allItems);
-            } catch (error) {
-                console.error('Error fetching inventory:', error);
-                document.getElementById('inventory-table-body').innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load data. Please check your backend connection.</td></tr>';
-            }
-        }
-
-        function filterInventory() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const filterCat = document.getElementById('categoryFilter').value;
-
-            const filtered = allItems.filter(item => {
-                const matchesSearch = item.sku.toLowerCase().includes(search) || item.item_name.toLowerCase().includes(search);
-                const matchesCat = filterCat === '' || item.category === filterCat;
-                return matchesSearch && matchesCat;
-            });
-
-            renderInventoryTable(filtered);
-        }
-
-        function renderInventoryTable(data) {
-            const tableBody = document.getElementById('inventory-table-body');
-            tableBody.innerHTML = '';
-
-            if (data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">No items found.</td></tr>';
-                return;
-            }
-
-            data.forEach(item => {
-                const statusBadge = item.is_low_stock 
-                    ? '<span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold border border-red-200"><i class="fas fa-exclamation-circle mr-1"></i> Low Stock</span>'
-                    : '<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200"><i class="fas fa-check-circle mr-1"></i> Optimal</span>';
-
-                const rowClass = item.is_low_stock ? 'bg-red-50 hover:bg-red-100 transition' : 'hover:bg-gray-50 transition';
-
-                const row = `
-                    <tr class="${rowClass}">
-                        <td class="p-4 text-sm font-medium text-gray-900">${item.sku}</td>
-                        <td class="p-4 text-sm text-gray-800">${item.item_name}</td>
-                        <td class="p-4 text-sm text-gray-500">${item.category || '-'}</td>
-                        <td class="p-4 text-sm">
-                            <span class="font-bold ${item.is_low_stock ? 'text-red-600' : 'text-gray-800'}">${item.current_stock}</span> 
-                            <span class="text-xs text-gray-400">/ Min: ${item.min_threshold}</span>
-                        </td>
-                        <td class="p-4 text-center flex items-center justify-center gap-2">
-                            ${statusBadge}
-                            <button onclick="openMovementModal('${item.sku}', 'stock-in')" class="text-blue-600 hover:text-blue-800 transition p-1" title="Stock In">
-                                <i class="fas fa-plus-circle"></i>
-                            </button>
-                            <button onclick="openMovementModal('${item.sku}', 'stock-out')" class="text-orange-500 hover:text-orange-700 transition p-1" title="Stock Out">
-                                <i class="fas fa-minus-circle"></i>
-                            </button>
-                            <button onclick="openEditModal('${item.sku}', '${item.item_name}', '${item.category || ''}', ${item.current_stock}, ${item.min_threshold})" class="text-gray-500 hover:text-blue-600 transition p-1" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="deleteItem('${item.sku}')" class="delete-btn text-gray-400 hover:text-red-500 transition p-1" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tableBody.insertAdjacentHTML('beforeend', row);
-            });
-
-            applyRoleBasedAccess();
-        }
-
-        function openModal() {
-            document.getElementById('addModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('addModal').classList.add('hidden');
-            document.getElementById('addForm').reset();
-        }
-
-        async function submitNewItem(event) {
-            event.preventDefault();
-            const payload = {
-                sku: document.getElementById('skuInput').value,
-                item_name: document.getElementById('nameInput').value,
-                category: document.getElementById('catInput').value,
-                current_stock: parseInt(document.getElementById('stockInput').value),
-                min_threshold: parseInt(document.getElementById('minInput').value)
-            };
-
-            try {
-                const response = await fetch('/api/inventory', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('token') 
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (response.ok) {
-                    closeModal();
-                    fetchInventory();
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Failed to add item.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        function openEditModal(sku, name, category, stock, min) {
-            document.getElementById('editSku').value = sku;
-            document.getElementById('editNameInput').value = name;
-            document.getElementById('editCatInput').value = category;
-            document.getElementById('editStockInput').value = stock;
-            document.getElementById('editMinInput').value = min;
-            document.getElementById('editModal').classList.remove('hidden');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
-
-        async function submitEditItem(event) {
-            event.preventDefault();
-            const sku = document.getElementById('editSku').value;
-            const payload = {
-                item_name: document.getElementById('editNameInput').value,
-                category: document.getElementById('editCatInput').value,
-                current_stock: parseInt(document.getElementById('editStockInput').value),
-                min_threshold: parseInt(document.getElementById('editMinInput').value)
-            };
-
-            try {
-                const response = await fetch(`/api/inventory/${sku}`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('token') 
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    closeEditModal();
-                    fetchInventory();
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Failed to update item.');
-                }
-            } catch (error) {
-                console.error('Error updating item:', error);
-            }
-        }
-
-        async function deleteItem(sku) {
-            if (!confirm(`Are you sure you want to delete ${sku}?`)) return;
-            
-            try {
-                const response = await fetch(`/api/inventory/${sku}`, { 
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token') 
-                    }
-                });
-                
-                if (response.ok) {
-                    fetchInventory();
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Failed to delete item.');
-                }
-            } catch (error) {
-                console.error('Error deleting item:', error);
-            }
-        }
-
-        function openMovementModal(sku, type) {
-            document.getElementById('movementSku').value = sku;
-            document.getElementById('movementTypeInput').value = type;
-            document.getElementById('movementTitle').textContent = type === 'stock-in' ? 'Record Stock-In' : 'Record Stock-Out';
-            document.getElementById('movementModal').classList.remove('hidden');
-        }
-
-        function closeMovementModal() {
-            document.getElementById('movementModal').classList.add('hidden');
-            document.getElementById('movementForm').reset();
-        }
-
-        async function submitMovement(event) {
-            event.preventDefault();
-            const sku = document.getElementById('movementSku').value;
-            const type = document.getElementById('movementTypeInput').value;
-            const quantity = document.getElementById('movementQuantity').value;
-
-            try {
-                const response = await fetch(`/api/inventory/${sku}/movement`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('token') 
-                    },
-                    body: JSON.stringify({
-                        quantity_changed: quantity,
-                        movement_type: type
-                    })
-                });
-
-                if (response.ok) {
-                    closeMovementModal();
-                    fetchInventory();
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Failed to process movement.');
-                }
-            } catch (error) {
-                console.error('Error processing movement:', error);
-            }
-        }
-
-        async function fetchMovements() {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const response = await fetch('/api/movements', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-
-                const data = await response.json();
-                const tbody = document.getElementById('movements-table-body');
-                tbody.innerHTML = '';
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">No stock movements found.</td></tr>';
-                    return;
-                }
-
-                data.forEach(m => {
-                    const row = `
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="p-4 text-sm text-gray-500">${new Date(m.timestamp).toLocaleString()}</td>
-                            <td class="p-4 text-sm font-medium text-gray-900">${m.sku}</td>
-                            <td class="p-4 text-sm text-gray-800">${m.item_name || 'N/A'}</td>
-                            <td class="p-4 text-sm text-gray-500">${m.username || 'System'}</td>
-                            <td class="p-4 text-sm">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${m.movement_type === 'stock-in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                    ${m.movement_type}
-                                </span>
-                            </td>
-                            <td class="p-4 text-sm font-bold text-gray-800">${m.quantity_changed}</td>
-                        </tr>
-                    `;
-                    tbody.insertAdjacentHTML('beforeend', row);
-                });
-            } catch (error) {
-                console.error('Error fetching movements:', error);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', fetchInventory);
-    </script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
