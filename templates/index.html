@@ -50,12 +50,17 @@
                 </a>
             </nav>
             <div class="mt-auto px-2 border-top pt-4">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;">U</div>
-                    <div>
-                        <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
-                        <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;" id="userInitial">U</div>
+                        <div>
+                            <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
+                            <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
+                        </div>
                     </div>
+                    <button onclick="handleLogout()" class="btn btn-sm text-danger btn-light border-0" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
                 </div>
             </div>
         </aside>
