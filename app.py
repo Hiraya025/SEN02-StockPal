@@ -64,6 +64,16 @@ def init_db():
                 movement_type VARCHAR(20) NOT NULL
             );
         ''')
+        
+        # Auto-seed an initial admin if no users exist
+        cur.execute('SELECT COUNT(*) as count FROM users')
+        if cur.fetchone()['count'] == 0:
+            default_pw = generate_password_hash('admin123')
+            cur.execute('''
+                INSERT INTO users (username, password_hash, role)
+                VALUES (%s, %s, %s)
+            ''', ('admin', default_pw, 'admin'))
+            
         conn.commit()
     finally:
         cur.close()
@@ -307,8 +317,36 @@ def get_movements():
         if cur: cur.close()
         if conn: conn.close()
 
+# --- USER MANAGEMENT ROUTES ---
+
+@app.route('/api/users', methods=['GET'])
+@jwt_required()
+def get_users():
+    conn = None
+    cur = None
+    try:
+        claims = get_jwt()
+        if claims.get('role') != 'admin':
+            return jsonify({"error": "Unauthorized"}), 403
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('SELECT id, username, role FROM users ORDER BY id DESC;')
+        users = cur.fetchall()
+        return jsonify(users), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
 @app.route('/api/register', methods=['POST'])
+@jwt_required()
 def register():
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -339,7 +377,7 @@ def register():
         if cur: cur.close()
         if conn: conn.close()
 
-    return jsonify({"message": "User registered successfully"})
+    return jsonify({"message": "User registered successfully"}), 201
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -359,7 +397,6 @@ def login():
         if conn: conn.close()
 
     if user and check_password_hash(user['password_hash'], password):
-        # FIX: Pass string to identity, and pass dict to additional_claims
         access_token = create_access_token(
             identity=str(user['username']),
             additional_claims={
