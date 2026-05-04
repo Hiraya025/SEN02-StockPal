@@ -3,24 +3,19 @@ import sys
 from unittest.mock import patch, MagicMock
 
 # 1. INJECT FAKE ENVIRONMENT VARIABLES
-os.environ['JWT_SECRET_KEY'] = 'test-secret-key-123'
+# FIX: Use a key longer than 32 characters to prevent PyJWT from rejecting the token
+os.environ['JWT_SECRET_KEY'] = 'super-secret-test-key-that-is-long-enough-for-hs256'
 os.environ['DATABASE_URL'] = 'postgresql://dummy-test-db'
 
 import pytest
 import json
-import io
-import csv
 
 # 2. INTERCEPT THE DATABASE CONNECTION AT IMPORT TIME
-# We must mock the connection *before* app.py finishes loading so init_db() doesn't crash.
 with patch('psycopg2.connect') as mock_connect:
-    # Set up a fake database connection object
     mock_conn = MagicMock()
     mock_cur = MagicMock()
     mock_connect.return_value = mock_conn
     mock_conn.cursor.return_value = mock_cur
-    
-    # Now it is safe to import the app
     from app import app
 
 @pytest.fixture
@@ -36,6 +31,9 @@ def admin_headers(client):
     """Generates an admin JWT token for protected routes."""
     from flask_jwt_extended import create_access_token
     token = create_access_token(identity={"id": 1, "role": "admin"})
+    # FIX: Ensure token is a string, as older Python environments may return bytes
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
     return {'Authorization': f'Bearer {token}'}
 
 @pytest.fixture
@@ -43,6 +41,8 @@ def employee_headers(client):
     """Generates an employee JWT token to test Role-Based Access Control."""
     from flask_jwt_extended import create_access_token
     token = create_access_token(identity={"id": 2, "role": "employee"})
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
     return {'Authorization': f'Bearer {token}'}
 
 # --- TESTS ---
@@ -63,7 +63,8 @@ def test_get_inventory_and_low_stock_logic(mock_db, client, admin_headers):
     response = client.get('/api/inventory', headers=admin_headers)
     data = json.loads(response.data)
 
-    assert response.status_code == 200
+    # Added debug output to assertions to catch future HTTP errors
+    assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
     assert len(data) == 2
     assert data[0]['is_low_stock'] is False
     assert data[1]['is_low_stock'] is True
@@ -84,7 +85,7 @@ def test_add_inventory_admin(mock_db, client, admin_headers):
 
     response = client.post('/api/inventory', data=json.dumps(payload), content_type='application/json', headers=admin_headers)
     
-    assert response.status_code == 201
+    assert response.status_code == 201, f"API Failed: {response.data.decode('utf-8')}"
     assert b"Item added successfully" in response.data
     mock_conn.commit.assert_called_once()
 
@@ -95,7 +96,7 @@ def test_add_inventory_employee_unauthorized(mock_db, client, employee_headers):
 
     response = client.post('/api/inventory', data=json.dumps(payload), content_type='application/json', headers=employee_headers)
     
-    assert response.status_code == 403
+    assert response.status_code == 403, f"API Failed: {response.data.decode('utf-8')}"
     assert b"Unauthorized" in response.data
 
 @patch('app.get_db_connection')
@@ -112,7 +113,7 @@ def test_download_inventory_report(mock_db, client, admin_headers):
 
     response = client.get('/api/inventory/report', headers=admin_headers)
     
-    assert response.status_code == 200
+    assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
     assert response.headers['Content-Type'] == 'text/csv; charset=utf-8'
     assert response.headers['Content-Disposition'] == 'attachment; filename=inventory_report.csv'
     
@@ -132,6 +133,6 @@ def test_delete_inventory_item(mock_db, client, admin_headers):
 
     response = client.delete('/api/inventory/ITEM-01', headers=admin_headers)
     
-    assert response.status_code == 200
+    assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
     assert b"deleted successfully" in response.data
     mock_conn.commit.assert_called_once()
