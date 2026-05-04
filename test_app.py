@@ -3,7 +3,6 @@ import sys
 from unittest.mock import patch, MagicMock
 
 # 1. INJECT FAKE ENVIRONMENT VARIABLES
-# FIX: Use a key longer than 32 characters to prevent PyJWT from rejecting the token
 os.environ['JWT_SECRET_KEY'] = 'super-secret-test-key-that-is-long-enough-for-hs256'
 os.environ['DATABASE_URL'] = 'postgresql://dummy-test-db'
 
@@ -30,8 +29,7 @@ def client():
 def admin_headers(client):
     """Generates an admin JWT token for protected routes."""
     from flask_jwt_extended import create_access_token
-    token = create_access_token(identity={"id": 1, "role": "admin"})
-    # FIX: Ensure token is a string, as older Python environments may return bytes
+    token = create_access_token(identity="admin", additional_claims={"id": 1, "role": "admin"})
     if isinstance(token, bytes):
         token = token.decode('utf-8')
     return {'Authorization': f'Bearer {token}'}
@@ -40,7 +38,7 @@ def admin_headers(client):
 def employee_headers(client):
     """Generates an employee JWT token to test Role-Based Access Control."""
     from flask_jwt_extended import create_access_token
-    token = create_access_token(identity={"id": 2, "role": "employee"})
+    token = create_access_token(identity="employee", additional_claims={"id": 2, "role": "employee"})
     if isinstance(token, bytes):
         token = token.decode('utf-8')
     return {'Authorization': f'Bearer {token}'}
@@ -63,7 +61,6 @@ def test_get_inventory_and_low_stock_logic(mock_db, client, admin_headers):
     response = client.get('/api/inventory', headers=admin_headers)
     data = json.loads(response.data)
 
-    # Added debug output to assertions to catch future HTTP errors
     assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
     assert len(data) == 2
     assert data[0]['is_low_stock'] is False
