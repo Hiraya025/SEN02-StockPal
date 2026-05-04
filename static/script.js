@@ -58,7 +58,8 @@ function getUserRole() {
         }).join(''));
         
         const parsed = JSON.parse(jsonPayload);
-        return parsed.sub ? parsed.sub.role : parsed.role;
+        // FIX: Look for role in the root claims first, then fallback to sub
+        return parsed.role || (parsed.sub ? parsed.sub.role : null);
     } catch (e) { return null; }
 }
 
