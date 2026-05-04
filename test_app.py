@@ -8,6 +8,7 @@ os.environ['DATABASE_URL'] = 'postgresql://dummy-test-db'
 
 import pytest
 import json
+import psycopg2
 
 # 2. INTERCEPT THE DATABASE CONNECTION AT IMPORT TIME
 with patch('psycopg2.connect') as mock_connect:
@@ -44,6 +45,16 @@ def employee_headers(client):
     return {'Authorization': f'Bearer {token}'}
 
 # --- TESTS ---
+
+# ---------------------------------------------------------
+# Test SEC-01: Unauthenticated Access
+# ---------------------------------------------------------
+def test_unauthenticated_access(client):
+    """Tests that accessing a protected route without a JWT returns 401."""
+    response = client.get('/api/inventory')
+    
+    assert response.status_code == 401
+    assert b"Missing Authorization Header" in response.data
 
 @patch('app.get_db_connection')
 def test_get_inventory_and_low_stock_logic(mock_db, client, admin_headers):
@@ -86,6 +97,27 @@ def test_add_inventory_admin(mock_db, client, admin_headers):
     assert b"Item added successfully" in response.data
     mock_conn.commit.assert_called_once()
 
+# ---------------------------------------------------------
+# Test DB-02: Duplicate SKU Error Handling
+# ---------------------------------------------------------
+@patch('app.get_db_connection')
+def test_add_inventory_duplicate_sku(mock_db, client, admin_headers):
+    """Tests that adding an existing SKU correctly throws a 409 Conflict error."""
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_db.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+
+    # Simulate the PostgreSQL database throwing a unique constraint error
+    mock_cur.execute.side_effect = psycopg2.IntegrityError("duplicate key value violates unique constraint")
+
+    payload = {"sku": "EXISTING-01", "item_name": "Keyboard"}
+    response = client.post('/api/inventory', data=json.dumps(payload), content_type='application/json', headers=admin_headers)
+
+    assert response.status_code == 409
+    assert b"already exists" in response.data
+    mock_conn.rollback.assert_called_once() # Verify the transaction was rolled back
+
 @patch('app.get_db_connection')
 def test_add_inventory_employee_unauthorized(mock_db, client, employee_headers):
     """Tests that Role-Based Access Control prevents employees from adding items."""
@@ -111,7 +143,6 @@ def test_download_inventory_report(mock_db, client, admin_headers):
     response = client.get('/api/inventory/report', headers=admin_headers)
     
     assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
-    # FIX: Changed this to check if 'text/csv' is in the header, rather than requiring an exact match
     assert 'text/csv' in response.headers['Content-Type']
     assert response.headers['Content-Disposition'] == 'attachment; filename=inventory_report.csv'
     
@@ -134,3 +165,36 @@ def test_delete_inventory_item(mock_db, client, admin_headers):
     assert response.status_code == 200, f"API Failed: {response.data.decode('utf-8')}"
     assert b"deleted successfully" in response.data
     mock_conn.commit.assert_called_once()
+
+# ---------------------------------------------------------
+# Test AUD-01: Audit Trail Verification
+# ---------------------------------------------------------
+@patch('app.get_db_connection')
+def test_record_stock_movement_audit(mock_db, client, employee_headers):
+    """Tests that stock movements accurately log the ID of the user performing the action."""
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_db.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+
+    # Mock the initial check for current stock level
+    mock_cur.fetchone.return_value = {"current_stock": 50}
+
+    payload = {
+        "movement_type": "stock-in",
+        "quantity_changed": 15
+    }
+
+    response = client.post('/api/inventory/ITEM-01/movement', data=json.dumps(payload), content_type='application/json', headers=employee_headers)
+
+    assert response.status_code == 201
+    mock_conn.commit.assert_called_once()
+
+    # The backend route runs 3 queries: SELECT, UPDATE, then INSERT. 
+    # We grab the arguments from the 3rd query (the INSERT into stock_movements)
+    insert_call_args = mock_cur.execute.call_args_list[2][0] 
+    query_vars = insert_call_args[1]
+    
+    # The employee_headers fixture provides a JWT with an ID of 2.
+    # The second variable in the INSERT query is the user_id. We assert it matches the JWT.
+    assert query_vars[1] == 2, f"Expected user_id 2 in audit log, but got {query_vars[1]}"
