@@ -29,18 +29,29 @@ async function apiFetch(url, options = {}) {
 function showView(viewId) {
     document.getElementById('dashboardView').classList.toggle('d-none', viewId !== 'dashboardView');
     document.getElementById('movementView').classList.toggle('d-none', viewId !== 'movementView');
+    document.getElementById('usersView').classList.toggle('d-none', viewId !== 'usersView');
 
     const navDashboard = document.getElementById('navDashboard');
     const navMovements = document.getElementById('navMovements');
+    const navUsers = document.getElementById('navUsers');
     
+    // Reset all nav classes
+    const activeClass = "nav-link active bg-light rounded-3 text-primary fw-bold p-3";
+    const inactiveClass = "nav-link text-muted p-3";
+    
+    navDashboard.className = inactiveClass;
+    navMovements.className = inactiveClass;
+    navUsers.className = inactiveClass;
+
     if (viewId === 'dashboardView') {
-        navDashboard.className = "nav-link active bg-light rounded-3 text-primary fw-bold p-3";
-        navMovements.className = "nav-link text-muted p-3";
+        navDashboard.className = activeClass;
         fetchInventory();
-    } else {
-        navMovements.className = "nav-link active bg-light rounded-3 text-primary fw-bold p-3";
-        navDashboard.className = "nav-link text-muted p-3";
+    } else if (viewId === 'movementView') {
+        navMovements.className = activeClass;
         fetchMovements();
+    } else if (viewId === 'usersView') {
+        navUsers.className = activeClass;
+        fetchUsers();
     }
 }
 
@@ -56,7 +67,6 @@ function getUserRole() {
         }).join(''));
         
         const parsed = JSON.parse(jsonPayload);
-        // FIX: Look for role in the root claims first, then fallback to sub
         return parsed.role || (parsed.sub ? parsed.sub.role : null);
     } catch (e) { return null; }
 }
@@ -67,12 +77,15 @@ function applyRoleBasedAccess() {
     
     const addItemBtn = document.getElementById('addItemBtn');
     const deleteButtons = document.querySelectorAll('.delete-btn');
+    const navUsers = document.getElementById('navUsers');
 
     if (role !== 'admin') {
         if (addItemBtn) addItemBtn.style.display = 'none';
+        if (navUsers) navUsers.style.display = 'none';
         deleteButtons.forEach(btn => btn.style.display = 'none');
     } else {
         if (addItemBtn) addItemBtn.style.display = 'block';
+        if (navUsers) navUsers.style.display = 'block';
         deleteButtons.forEach(btn => btn.style.display = 'inline-block');
     }
 }
@@ -121,6 +134,60 @@ function handleLogout() {
     showView('dashboardView'); // Reset to default view for next login
 }
 
+// --- User Management Logic (Admin) ---
+async function fetchUsers() {
+    try {
+        const response = await apiFetch('/api/users');
+        if (response.ok) {
+            const data = await response.json();
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+            
+            data.forEach(user => {
+                const badgeClass = user.role === 'admin' ? 'bg-primary text-white' : 'bg-secondary text-white';
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 fw-bold text-muted">${user.id}</td>
+                        <td class="fw-bold">${user.username}</td>
+                        <td><span class="badge ${badgeClass} px-3 py-2 rounded-pill">${user.role.toUpperCase()}</span></td>
+                    </tr>
+                `;
+            });
+        }
+    } catch (error) { console.error("Error fetching users:", error); }
+}
+
+async function submitNewUser(e) {
+    e.preventDefault();
+    const errorText = document.getElementById('userError');
+    const payload = {
+        username: document.getElementById('newUsername').value,
+        password: document.getElementById('newPassword').value,
+        role: document.getElementById('newRole').value
+    };
+
+    try {
+        const response = await apiFetch('/api/register', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+            document.getElementById('userForm').reset();
+            errorText.classList.add('d-none');
+            fetchUsers();
+        } else {
+            const data = await response.json();
+            errorText.textContent = data.error || 'Failed to create user.';
+            errorText.classList.remove('d-none');
+        }
+    } catch (error) { 
+        errorText.textContent = 'Network error.';
+        errorText.classList.remove('d-none');
+    }
+}
+
 // --- Inventory Logic ---
 async function fetchInventory() {
     const token = localStorage.getItem('token');
@@ -130,7 +197,6 @@ async function fetchInventory() {
         return;
     }
 
-    // Ensure dashboard is visible if token exists on load
     document.getElementById('loginPage').classList.add('d-none');
     document.getElementById('appContainer').classList.remove('d-none');
 
