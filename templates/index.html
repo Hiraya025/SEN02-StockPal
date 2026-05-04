@@ -4,14 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StockPal | Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-50 flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-white shadow-md flex flex-col hidden md:flex">
-        <div class="p-6 border-b">
-            <h1 class="text-2xl font-bold text-blue-600"><i class="fas fa-boxes mr-2"></i>StockPal</h1>
+    <!-- External UI Assets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Login Overlay (Member 1 Security + Member 3 Bootstrap) -->
+    <div id="loginPage" class="fixed-overlay d-flex align-items-center justify-content-center bg-light">
+        <div class="sp-card p-5 shadow-lg" style="width: 400px;">
+            <h3 class="fw-bold mb-4 text-primary"><i class="fas fa-lock me-2"></i>Login</h3>
+            <p id="loginError" class="text-danger small mb-3 d-none fw-bold"></p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Username</label>
+                    <input id="username" type="text" class="form-control-sp w-100" placeholder="Enter username" required>
+                </div>
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted">Password</label>
+                    <input id="password" type="password" class="form-control-sp w-100" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Log In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar d-none d-md-flex flex-column p-4">
+        <div class="mb-5 px-2">
+            <h4 class="fw-bold text-primary"><i class="fas fa-boxes me-2"></i>StockPal</h4>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="#" onclick="showView('dashboardView')" id="navDashboard" class="flex items-center p-3 text-blue-700 bg-blue-50 rounded-lg font-medium">
@@ -24,12 +49,12 @@
                 <i class="fas fa-exchange-alt mr-3"></i> Stock Movement
             </a>
         </nav>
-        <div class="p-4 border-t">
-            <div class="flex items-center">
-                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">A</div>
+        <div class="mt-auto px-2 border-top pt-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 32px; height: 32px;">U</div>
                 <div>
-                    <p class="text-sm font-medium text-gray-800">Admin User</p>
-                    <p class="text-xs text-gray-500">Manager Role</p>
+                    <p class="mb-0 small fw-bold text-dark" id="userDisplay">User</p>
+                    <p class="mb-0 text-muted" style="font-size: 0.75rem;" id="roleDisplay">Role</p>
                 </div>
             </div>
         </div>
@@ -70,8 +95,24 @@
         <div id="dashboardView" class="p-6 md:p-8 max-w-7xl mx-auto w-full">
             <div class="flex justify-between items-end mb-8 flex-wrap gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">Inventory Overview</h2>
-                    <p class="text-gray-600 mt-1">Real-time stock tracking and alerts.</p>
+                    <h2 class="fw-bold mb-1">Inventory Overview</h2>
+                    <p class="text-muted mb-0">Monitor stock levels and system health.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="downloadReport()" class="btn btn-success px-4 py-2 rounded-3 shadow-sm">
+                        <i class="fas fa-download me-2"></i>Report
+                    </button>
+                    <button id="addItemBtn" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+                        <i class="fas fa-plus me-2"></i>Add New Item
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar & Filters -->
+            <div class="sp-card p-3 mb-4 d-flex gap-3 flex-wrap">
+                <div class="input-group w-auto flex-grow-1">
+                    <span class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="inventorySearch" oninput="filterInventory()" class="form-control border-0 bg-transparent" placeholder="Search by SKU or Item name...">
                 </div>
 
                 <div class="flex items-center gap-3 flex-wrap">
@@ -103,12 +144,35 @@
                                 <th class="p-4 font-medium text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="inventory-table-body" class="divide-y divide-gray-100">
-                            <tr>
-                                <td colspan="5" class="p-8 text-center text-gray-500">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading inventory data...
-                                </td>
+                        <tbody id="inventory-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movement View (Hidden by default) -->
+        <div id="movementView" class="d-none">
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Stock Movement Logs</h2>
+                <p class="text-muted mb-0">Audit trail for all stock transactions.</p>
+            </div>
+            <div class="sp-card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-muted small text-uppercase">
+                                <th class="ps-4 border-0">Timestamp</th>
+                                <th class="border-0">SKU</th>
+                                <th class="border-0">Item Name</th>
+                                <th class="border-0">User</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0">Quantity</th>
                             </tr>
+                        </thead>
+                        <tbody id="movements-table-body">
+                            <!-- Populated by JS -->
                         </tbody>
                     </table>
                 </div>
@@ -141,30 +205,42 @@
         </div>
     </main>
 
-    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-xl shadow-lg w-96">
-            <h3 class="text-xl font-bold mb-4">Add New Item</h3>
-            <form id="addForm" onsubmit="submitNewItem(event)">
-                <input type="text" id="skuInput" placeholder="SKU (e.g., ITEM-001)" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                <input type="text" id="nameInput" placeholder="Item Name" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                <input type="text" id="catInput" placeholder="Category" class="w-full mb-3 p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
-                
-                <div class="flex gap-3 mb-5">
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 mb-1 block">Current Stock</label>
-                        <input type="number" id="stockInput" value="0" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 mb-1 block">Min Threshold</label>
-                        <input type="number" id="minInput" value="10" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" required>
-                    </div>
+    <!-- Modal: Add Item -->
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 20px;">
+                <div class="modal-header border-0">
+                    <h5 class="fw-bold">New Inventory Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save Item</button>
+                <div class="modal-body">
+                    <form id="addForm" onsubmit="submitNewItem(event)">
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">SKU CODE</label>
+                            <input type="text" id="skuInput" class="form-control-sp w-100" placeholder="ITEM-001" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">ITEM NAME</label>
+                            <input type="text" id="nameInput" class="form-control-sp w-100" placeholder="e.g. Ergonomic Chair" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-1">CATEGORY</label>
+                            <input type="text" id="catInput" class="form-control-sp w-100" placeholder="e.g. Furniture">
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <label class="small fw-bold text-muted mb-1">INITIAL STOCK</label>
+                                <input type="number" id="stockInput" class="form-control-sp w-100" value="0">
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold text-muted mb-1">MIN THRESHOLD</label>
+                                <input type="number" id="minInput" class="form-control-sp w-100" value="10">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2">Create Item</button>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
