@@ -1,3 +1,10 @@
+import os
+
+# 🟢 INJECT FAKE ENVIRONMENT VARIABLES BEFORE IMPORTING APP 🟢
+# This bypasses the security crash on line 19 of app.py during local testing
+os.environ['JWT_SECRET_KEY'] = 'test-secret-key-123'
+os.environ['DATABASE_URL'] = 'postgresql://dummy-test-db'
+
 import pytest
 import json
 from unittest.mock import patch, MagicMock
