@@ -1,5 +1,31 @@
 let allItems = [];
 
+// FIX: Centralized fetch wrapper to handle 401 Unauthorized globally
+async function apiFetch(url, options = {}) {
+    const token = localStorage.getItem('token');
+    const headers = new Headers(options.headers || {});
+    
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    if (!headers.has('Content-Type') && options.body instanceof URLSearchParams === false) {
+        headers.set('Content-Type', 'application/json');
+    }
+
+    options.headers = headers;
+
+    const response = await fetch(url, options);
+    
+    if (response.status === 401) {
+        localStorage.removeItem('token');
+        document.getElementById('loginPage').classList.remove('d-none');
+        throw new Error("Session expired or unauthorized. Please log in again.");
+    }
+    
+    return response;
+}
+
 // --- View Navigation ---
 function showView(viewId) {
     document.getElementById('dashboardView').classList.toggle('d-none', viewId !== 'dashboardView');
@@ -19,7 +45,7 @@ function showView(viewId) {
     }
 }
 
-// --- Auth & Role Based Access (Mem 1) ---
+// --- Auth & Role Based Access ---
 function getUserRole() {
     const token = localStorage.getItem('token');
     if (!token) return null;
@@ -69,6 +95,9 @@ async function handleLogin(event) {
             localStorage.setItem('token', data.access_token);
             document.getElementById('loginPage').classList.add('d-none');
             document.getElementById('userDisplay').textContent = username;
+            
+            // FIX: Call applyRoleBasedAccess immediately after token is set to prevent UI flicker/delay
+            applyRoleBasedAccess(); 
             fetchInventory();
         } else {
             errorText.textContent = 'Invalid credentials.';
@@ -80,7 +109,7 @@ async function handleLogin(event) {
     }
 }
 
-// --- Inventory Logic (Mem 2 Backend + Mem 3 UI) ---
+// --- Inventory Logic ---
 async function fetchInventory() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -89,19 +118,9 @@ async function fetchInventory() {
     }
 
     try {
-        const response = await fetch('/api/inventory', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.status === 401) {
-            localStorage.removeItem('token');
-            document.getElementById('loginPage').classList.remove('d-none');
-            return;
-        }
-
+        const response = await apiFetch('/api/inventory');
         allItems = await response.json();
         
-        // Populate category dropdown
         const select = document.getElementById('categoryFilter');
         if (select.options.length === 1) {
             const categories = [...new Set(allItems.map(i => i.category).filter(Boolean))];
@@ -167,12 +186,8 @@ async function submitNewItem(e) {
     };
 
     try {
-        const response = await fetch('/api/inventory', {
+        const response = await apiFetch('/api/inventory', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
             body: JSON.stringify(payload)
         });
         if (response.ok) {
@@ -199,12 +214,8 @@ async function updateItem(e) {
     };
 
     try {
-        const response = await fetch(`/api/inventory/${sku}`, {
+        const response = await apiFetch(`/api/inventory/${sku}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
             body: JSON.stringify(payload)
         });
         if (response.ok) {
@@ -217,9 +228,8 @@ async function updateItem(e) {
 async function deleteItem(sku) {
     if (!confirm(`Permanently delete ${sku}?`)) return;
     try {
-        const response = await fetch(`/api/inventory/${sku}`, { 
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        const response = await apiFetch(`/api/inventory/${sku}`, { 
+            method: 'DELETE'
         });
         if (response.ok) fetchInventory();
     } catch (error) { console.error(error); }
@@ -239,19 +249,14 @@ async function submitMovement(e) {
     e.preventDefault();
     const sku = document.getElementById('moveSku').value;
     
-    // Aligned to Backend keys
     const payload = {
         movement_type: document.getElementById('moveType').value,
         quantity_changed: parseInt(document.getElementById('moveQty').value)
     };
 
     try {
-        const response = await fetch(`/api/inventory/${sku}/movement`, {
+        const response = await apiFetch(`/api/inventory/${sku}/movement`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
             body: JSON.stringify(payload)
         });
         if (response.ok) {
@@ -267,9 +272,7 @@ async function submitMovement(e) {
 
 async function fetchMovements() {
     try {
-        const response = await fetch('/api/movements', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
+        const response = await apiFetch('/api/movements');
         const data = await response.json();
         const tbody = document.getElementById('movements-table-body');
         tbody.innerHTML = '';
@@ -292,9 +295,7 @@ async function fetchMovements() {
 
 async function downloadReport() {
     try {
-        const response = await fetch('/api/inventory/report', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
+        const response = await apiFetch('/api/inventory/report');
         if (response.ok) {
             const blob = await response.blob();
             const a = document.createElement('a');
@@ -306,4 +307,7 @@ async function downloadReport() {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', fetchInventory);
+document.addEventListener('DOMContentLoaded', () => {
+    applyRoleBasedAccess();
+    fetchInventory();
+});
